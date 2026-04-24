@@ -1,0 +1,144 @@
+module color_mapper (
+    input  logic        clk_25,
+    input  logic        blank,
+    input  logic [9:0]  DrawX,
+    input  logic [9:0]  DrawY,
+
+    // Character positions — hardcode for now, inputs later
+    input  logic [9:0]  paul_x,
+    input  logic [9:0]  paul_y,
+    input  logic [9:0]  jack_x,
+    input  logic [9:0]  jack_y,
+
+    // Animation frames — hardcode 0 for static demo
+    input  logic [2:0]  paul_frame,
+    input  logic [2:0]  jack_frame,
+
+    // VGA output
+    output logic [3:0]  vga_r,
+    output logic [3:0]  vga_g,
+    output logic [3:0]  vga_b
+);
+
+    // ── Constants ──────────────────────────────────────────────────────
+    localparam SPRITE_W  = 64;
+    localparam SPRITE_H  = 128;
+    localparam SCALE     = 2;
+    localparam FRAME_PIX = SPRITE_W * SPRITE_H;  // 8192
+    localparam BG_W      = 256;
+    localparam BG_H      = 128;
+    localparam FRAME_W   = 320;
+    localparam FRAME_H   = 240;
+
+    // ── Address wires ──────────────────────────────────────────────────
+    logic [15:0] paul_addr, jack_addr;
+    logic [14:0] bg_addr;
+
+    // ── Color outputs from each sub-module ─────────────────────────────
+    logic [11:0] paul_color;   // 12-bit RGB from paul_m
+    logic [11:0] jack_color;   // 12-bit RGB from jack_m
+    logic [11:0] bg_color;     // 12-bit RGB from bg_m
+
+    // ── Transparency flags from each sub-module ────────────────────────
+    // Each module returns whether its pixel is transparent (index == 0)
+    logic paul_transparent;
+    logic jack_transparent;
+
+    // ── Local coordinates ──────────────────────────────────────────────
+    logic signed [10:0] paul_lx, paul_ly;
+    logic signed [10:0] jack_lx, jack_ly;
+
+    assign paul_lx = {1'b0, DrawX} - {1'b0, paul_x};
+    assign paul_ly = {1'b0, DrawY} - {1'b0, paul_y};
+    assign jack_lx = {1'b0, DrawX} - {1'b0, jack_x};
+    assign jack_ly = {1'b0, DrawY} - {1'b0, jack_y};
+
+    // ── Bounds checks ──────────────────────────────────────────────────
+    logic paul_in_bounds, jack_in_bounds;
+
+    assign paul_in_bounds = (~paul_lx[10]) && (~paul_ly[10]) &&
+                            (paul_lx < SPRITE_W * SCALE) &&
+                            (paul_ly < SPRITE_H * SCALE);
+
+    assign jack_in_bounds = (~jack_lx[10]) && (~jack_ly[10]) &&
+                            (jack_lx < SPRITE_W * SCALE) &&
+                            (jack_ly < SPRITE_H * SCALE);
+
+    // ── Address calculations ───────────────────────────────────────────
+
+    // Paul — faces right (normal)
+    assign paul_addr = paul_in_bounds
+        ? (paul_frame * FRAME_PIX)
+          + ((paul_ly >> 1) * SPRITE_W)
+          + (paul_lx >> 1)
+        : '0;
+
+    // Jack — faces left (horizontally flipped)
+    assign jack_addr = jack_in_bounds
+        ? (jack_frame * FRAME_PIX)
+          + ((jack_ly >> 1) * SPRITE_W)
+          + (SPRITE_W - 1 - (jack_lx >> 1))
+        : '0;
+
+    // Background — scale 256×128 → 320×240
+    assign bg_addr = ((DrawY * BG_H) / FRAME_H) * BG_W
+                   + ((DrawX * BG_W) / FRAME_W);
+
+    // ── Sub-module instantiations ──────────────────────────────────────
+
+    paul_m u_paul (
+        .clk         (clk_25),
+        .addr        (paul_addr),
+        .color       (paul_color),
+        .transparent (paul_transparent)
+    );
+
+    jack_m u_jack (
+        .clk         (clk_25),
+        .addr        (jack_addr),
+        .color       (jack_color),
+        .transparent (jack_transparent)
+    );
+
+    bg_m u_bg (
+        .clk         (clk_25),
+        .addr        (bg_addr),
+        .color       (bg_color)
+        // no transparency for background
+    );
+
+    // ── Pipeline — delay bounds + blank 1 cycle (BRAM latency) ────────
+    logic paul_in_bounds_d, jack_in_bounds_d;
+    logic blank_d;
+
+    always_ff @(posedge clk_25) begin
+        paul_in_bounds_d <= paul_in_bounds;
+        jack_in_bounds_d <= jack_in_bounds;
+        blank_d          <= blank;
+    end
+
+    // ── Compositing ────────────────────────────────────────────────────
+    logic [11:0] pixel_color;
+
+    always_comb begin
+        if (blank_d)
+            pixel_color = 12'h000;
+
+        // Paul on top — only if in bounds AND not transparent
+        else if (paul_in_bounds_d && !paul_transparent)
+            pixel_color = paul_color;
+
+        // Jack second
+        else if (jack_in_bounds_d && !jack_transparent)
+            pixel_color = jack_color;
+
+        // Background always visible
+        else
+            pixel_color = bg_color;
+    end
+
+    assign vga_r = pixel_color[11:8];
+    assign vga_g = pixel_color[7:4];
+    assign vga_b = pixel_color[3:0];
+
+endmodule
