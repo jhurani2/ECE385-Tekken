@@ -1,31 +1,18 @@
-module display_controller (
+module color_mapper (
     input  logic        clk_25,
-    input  logic        rst,
-
-    // From VGA timing
+    input  logic        blank,
     input  logic [9:0]  DrawX,
     input  logic [9:0]  DrawY,
-    input  logic        blank,
 
-    // From AXI GPIO (written by MicroBlaze)
+    // Character positions — hardcode for now, inputs later
     input  logic [9:0]  paul_x,
     input  logic [9:0]  paul_y,
     input  logic [9:0]  jack_x,
     input  logic [9:0]  jack_y,
+
+    // Animation frames — hardcode 0 for static demo
     input  logic [2:0]  paul_frame,
     input  logic [2:0]  jack_frame,
-    input  logic [6:0]  p1_health,   // 0-100
-    input  logic [6:0]  p2_health,   // 0-100
-
-    // ROM addresses OUT
-    output logic [15:0] paul_addr,
-    output logic [15:0] jack_addr,
-    output logic [14:0] bg_addr,
-
-    // ROM data IN (valid 1 cycle after address)
-    input  logic [2:0]  paul_idx,
-    input  logic [2:0]  jack_idx,
-    input  logic [2:0]  bg_idx,
 
     // VGA output
     output logic [3:0]  vga_r,
@@ -33,65 +20,31 @@ module display_controller (
     output logic [3:0]  vga_b
 );
 
-    // ── Sprite/frame constants ─────────────────────────────────────────
-    localparam SPRITE_W   = 64;
-    localparam SPRITE_H   = 128;
-    localparam SCALE      = 2;
-    localparam FRAME_PIX  = SPRITE_W * SPRITE_H;  // 8192
+    // ── Constants ──────────────────────────────────────────────────────
+    localparam SPRITE_W  = 64;
+    localparam SPRITE_H  = 128;
+    localparam SCALE     = 2;
+    localparam FRAME_PIX = SPRITE_W * SPRITE_H;  // 8192
+    localparam BG_W      = 256;
+    localparam BG_H      = 128;
+    localparam FRAME_W   = 320;
+    localparam FRAME_H   = 240;
 
-    // ── Background constants ───────────────────────────────────────────
-    localparam BG_W       = 256;
-    localparam BG_H       = 128;
-    localparam FRAME_W    = 320;
-    localparam FRAME_H    = 240;
+    // ── Address wires ──────────────────────────────────────────────────
+    logic [15:0] paul_addr, jack_addr;
+    logic [14:0] bg_addr;
 
-    // ── HUD constants ──────────────────────────────────────────────────
-    localparam HUD_H      = 20;
-    localparam BAR_Y0     = 5;
-    localparam BAR_Y1     = 14;
-    localparam BAR_W      = 120;
-    localparam P1_BAR_X   = 8;
-    localparam P2_BAR_X   = 192;   // 320 - 8 - 120
+    // ── Color outputs from each sub-module ─────────────────────────────
+    logic [11:0] paul_color;   // 12-bit RGB from paul_m
+    logic [11:0] jack_color;   // 12-bit RGB from jack_m
+    logic [11:0] bg_color;     // 12-bit RGB from bg_m
 
-    // ── Palettes ───────────────────────────────────────────────────────
-    // Replace these with values from your generated palette .sv files
-    logic [11:0] paul_palette [0:7];
-    logic [11:0] jack_palette [0:7];
-    logic [11:0] bg_palette   [0:7];
+    // ── Transparency flags from each sub-module ────────────────────────
+    // Each module returns whether its pixel is transparent (index == 0)
+    logic paul_transparent;
+    logic jack_transparent;
 
-    initial begin
-        // Paul — index 0 MUST be transparent (never rendered)
-        paul_palette[0] = 12'h000;
-        paul_palette[1] = 12'hF80;
-        paul_palette[2] = 12'hFFF;
-        paul_palette[3] = 12'h840;
-        paul_palette[4] = 12'hF00;
-        paul_palette[5] = 12'h08F;
-        paul_palette[6] = 12'hFF0;
-        paul_palette[7] = 12'h444;
-
-        // Jack — index 0 MUST be transparent
-        jack_palette[0] = 12'h000;
-        jack_palette[1] = 12'h44F;
-        jack_palette[2] = 12'hFFF;
-        jack_palette[3] = 12'h228;
-        jack_palette[4] = 12'hF00;
-        jack_palette[5] = 12'h0F8;
-        jack_palette[6] = 12'hFF0;
-        jack_palette[7] = 12'h222;
-
-        // Background — index 0 IS a real color (no transparency for bg)
-        bg_palette[0]   = 12'h46A;  // sky blue
-        bg_palette[1]   = 12'h357;
-        bg_palette[2]   = 12'h8AB;
-        bg_palette[3]   = 12'hBCD;
-        bg_palette[4]   = 12'h531;
-        bg_palette[5]   = 12'h742;
-        bg_palette[6]   = 12'h964;
-        bg_palette[7]   = 12'hBA8;
-    end
-
-    // ── Local coordinates (combinational) ─────────────────────────────
+    // ── Local coordinates ──────────────────────────────────────────────
     logic signed [10:0] paul_lx, paul_ly;
     logic signed [10:0] jack_lx, jack_ly;
 
@@ -100,124 +53,90 @@ module display_controller (
     assign jack_lx = {1'b0, DrawX} - {1'b0, jack_x};
     assign jack_ly = {1'b0, DrawY} - {1'b0, jack_y};
 
-    // ── Bounds checks (combinational) ─────────────────────────────────
+    // ── Bounds checks ──────────────────────────────────────────────────
     logic paul_in_bounds, jack_in_bounds;
 
-    assign paul_in_bounds = (~paul_lx[10]) &&
-                            (~paul_ly[10]) &&
-                            (paul_lx < (SPRITE_W * SCALE)) &&
-                            (paul_ly < (SPRITE_H * SCALE));
+    assign paul_in_bounds = (~paul_lx[10]) && (~paul_ly[10]) &&
+                            (paul_lx < SPRITE_W * SCALE) &&
+                            (paul_ly < SPRITE_H * SCALE);
 
-    assign jack_in_bounds = (~jack_lx[10]) &&
-                            (~jack_ly[10]) &&
-                            (jack_lx < (SPRITE_W * SCALE)) &&
-                            (jack_ly < (SPRITE_H * SCALE));
+    assign jack_in_bounds = (~jack_lx[10]) && (~jack_ly[10]) &&
+                            (jack_lx < SPRITE_W * SCALE) &&
+                            (jack_ly < SPRITE_H * SCALE);
 
-    // ── ROM addresses (combinational) ─────────────────────────────────
+    // ── Address calculations ───────────────────────────────────────────
 
-    // Paul — normal orientation (faces right)
+    // Paul — faces right (normal)
     assign paul_addr = paul_in_bounds
-        ? (paul_frame  * FRAME_PIX)
+        ? (paul_frame * FRAME_PIX)
           + ((paul_ly >> 1) * SPRITE_W)
           + (paul_lx >> 1)
         : '0;
 
-    // Jack — horizontally flipped (faces left toward Paul)
+    // Jack — faces left (horizontally flipped)
     assign jack_addr = jack_in_bounds
-        ? (jack_frame  * FRAME_PIX)
+        ? (jack_frame * FRAME_PIX)
           + ((jack_ly >> 1) * SPRITE_W)
           + (SPRITE_W - 1 - (jack_lx >> 1))
         : '0;
 
-    // Background — scales 256×128 stored image to 320×240 display
+    // Background — scale 256×128 → 320×240
     assign bg_addr = ((DrawY * BG_H) / FRAME_H) * BG_W
                    + ((DrawX * BG_W) / FRAME_W);
 
-    // ── Pipeline — delay 1 cycle to match BRAM read latency ───────────
+    // ── Sub-module instantiations ──────────────────────────────────────
+
+    paul_m u_paul (
+        .clk         (clk_25),
+        .addr        (paul_addr),
+        .color       (paul_color),
+        .transparent (paul_transparent)
+    );
+
+    jack_m u_jack (
+        .clk         (clk_25),
+        .addr        (jack_addr),
+        .color       (jack_color),
+        .transparent (jack_transparent)
+    );
+
+    bg_m u_bg (
+        .clk         (clk_25),
+        .addr        (bg_addr),
+        .color       (bg_color)
+        // no transparency for background
+    );
+
+    // ── Pipeline — delay bounds + blank 1 cycle (BRAM latency) ────────
     logic paul_in_bounds_d, jack_in_bounds_d;
     logic blank_d;
-    logic [9:0] DrawX_d, DrawY_d;
 
     always_ff @(posedge clk_25) begin
         paul_in_bounds_d <= paul_in_bounds;
         jack_in_bounds_d <= jack_in_bounds;
         blank_d          <= blank;
-        DrawX_d          <= DrawX;
-        DrawY_d          <= DrawY;
     end
 
-    // ── HUD geometry (on delayed coords) ──────────────────────────────
-    logic in_hud;
-    logic in_p1_bar, in_p2_bar;
-    logic in_p1_bar_bg, in_p2_bar_bg;
-
-    assign in_hud = (DrawY_d < HUD_H);
-
-    // P1 health bar — grows right from P1_BAR_X
-    assign in_p1_bar = in_hud
-                    && (DrawY_d >= BAR_Y0)
-                    && (DrawY_d <= BAR_Y1)
-                    && (DrawX_d >= P1_BAR_X)
-                    && (DrawX_d <  P1_BAR_X + (BAR_W * p1_health / 100));
-
-    // P2 health bar — grows LEFT from right edge (mirror of P1)
-    assign in_p2_bar = in_hud
-                    && (DrawY_d >= BAR_Y0)
-                    && (DrawY_d <= BAR_Y1)
-                    && (DrawX_d >= P2_BAR_X + BAR_W - (BAR_W * p2_health / 100))
-                    && (DrawX_d <  P2_BAR_X + BAR_W);
-
-    // Empty bar background (shows when health < 100)
-    assign in_p1_bar_bg = in_hud
-                       && (DrawY_d >= BAR_Y0)
-                       && (DrawY_d <= BAR_Y1)
-                       && (DrawX_d >= P1_BAR_X)
-                       && (DrawX_d <  P1_BAR_X + BAR_W);
-
-    assign in_p2_bar_bg = in_hud
-                       && (DrawY_d >= BAR_Y0)
-                       && (DrawY_d <= BAR_Y1)
-                       && (DrawX_d >= P2_BAR_X)
-                       && (DrawX_d <  P2_BAR_X + BAR_W);
-
-    // ── Compositing — priority order back to front ─────────────────────
+    // ── Compositing ────────────────────────────────────────────────────
     logic [11:0] pixel_color;
 
     always_comb begin
-        if (blank_d) begin
-            // Sync blanking — always black
+        if (blank_d)
             pixel_color = 12'h000;
 
-        // ── Layer 4: HUD ─────────────────────────────────────────────
-        end else if (in_p1_bar) begin
-            // P1 health — green, gets darker as health drops
-            // Swap to yellow below 50%, red below 25% later
-            pixel_color = 12'h0F0;
+        // Paul on top — only if in bounds AND not transparent
+        else if (paul_in_bounds_d && !paul_transparent)
+            pixel_color = paul_color;
 
-        end else if (in_p2_bar) begin
-            pixel_color = 12'h0F0;   // same green for P2
+        // Jack second
+        else if (jack_in_bounds_d && !jack_transparent)
+            pixel_color = jack_color;
 
-        end else if (in_p1_bar_bg || in_p2_bar_bg) begin
-            pixel_color = 12'h300;   // dark red empty bar
-
-        end else if (in_hud) begin
-            pixel_color = 12'h111;   // HUD strip background
-
-        // ── Layer 3: Paul ────────────────────────────────────────────
-        end else if (paul_in_bounds_d && paul_idx != 3'h0) begin
-            pixel_color = paul_palette[paul_idx];
-
-        // ── Layer 2: Jack ────────────────────────────────────────────
-        end else if (jack_in_bounds_d && jack_idx != 3'h0) begin
-            pixel_color = jack_palette[jack_idx];
-
-        // ── Layer 1: Background ──────────────────────────────────────
-        end else begin
-            pixel_color = bg_palette[bg_idx];
-        end
+        // Background always visible
+        else
+            pixel_color = bg_color;
     end
 
-    // ── Drive VGA outputs ─────────────────────────────────────────────
     assign vga_r = pixel_color[11:8];
     assign vga_g = pixel_color[7:4];
     assign vga_b = pixel_color[3:0];
