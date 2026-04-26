@@ -6,7 +6,7 @@ module Jack_example (
 );
 
 logic [12:0] rom_address;
-logic [2:0] rom_q;
+logic [7:0] rom_q;
 
 logic [3:0] palette_red, palette_green, palette_blue;
 
