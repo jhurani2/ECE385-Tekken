@@ -6,7 +6,7 @@ module Kyoto_example (
 );
 
 logic [16:0] rom_address;
-logic [7:0] rom_q;
+logic [3:0] rom_q;
 
 logic [3:0] palette_red, palette_green, palette_blue;
 
