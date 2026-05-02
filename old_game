@@ -1,0 +1,185 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 04/30/2026 07:51:26 PM
+// Design Name: 
+// Module Name: game_logic
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module game_logic(
+    input logic reset,
+    input logic clk,
+    input logic [7:0] keycode0, keycode1,
+    output logic [9:0] char1_x,char1_y, char2_x,char2_y
+    );
+    
+
+    logic [9:0] Char1_X_Motion;
+    logic [9:0] Char1_X_Motion_next;
+    logic [9:0] Char1_Y_Motion;
+    logic [9:0] Char1_Y_Motion_next;
+
+    logic [9:0] Char1_X_next;
+    logic [9:0] Char1_Y_next;
+    
+    logic [9:0] Char2_X_Motion;
+    logic [9:0] Char2_X_Motion_next;
+    logic [9:0] Char2_Y_Motion;
+    logic [9:0] Char2_Y_Motion_next;
+    logic [9:0] Char2_X_next;
+    logic [9:0] Char2_Y_next;
+    
+    logic [7:0] prev_keycode;
+    
+    parameter [9:0] Ball_X_Min=0;       // Leftmost point on the X axis
+    parameter [9:0] Ball_X_Max=639;     // Rightmost point on the X axis
+    parameter [9:0] Ball_Y_Min=0;       // Topmost point on the Y axis
+    parameter [9:0] Ball_Y_Max=479;     // Bottommost point on the Y axis
+    parameter [9:0] Char_X_Step=1;      // Step size on the X axis
+    parameter [9:0] Char_Y_Step=1;      // Step size on the Y axis
+    
+    localparam CHAR1X = 10'd70;
+    localparam CHAR1Y = 10'd280;
+    localparam CHAR2X = 10'd340;
+    localparam CHAR2Y = 10'd280;
+    
+//always_comb
+//    begin
+//        Char1_Y_Motion_next = Char1_Y_Motion; // set default motion to be same as prev clock cycle 
+//        Char1_X_Motion_next = Char1_X_Motion;
+//        Char2_Y_Motion_next = Char2_Y_Motion; // set default motion to be same as prev clock cycle 
+//        Char2_X_Motion_next = Char2_X_Motion;
+        
+        //modify to control ball motion with the keycode
+//        if (keycode0 == 8'h1A)//w
+//            begin
+//            Char1_Y_Motion_next = -10'd1;
+//            Char1_X_Motion_next = 10'd0;
+//            end
+//        if (keycode0 == 8'h04)//a - left
+//            begin
+//            Char1_X_Motion_next = -10'd1;
+//            Char1_Y_Motion_next = 10'd0;
+//            end
+//        if (keycode0 == 8'h16)//s down
+//            begin
+//            Char1_Y_Motion_next = 10'd1;
+//            Char1_X_Motion_next = 10'd0;
+//            end
+//        if (keycode0 == 8'h07)//d - right
+//            begin
+//            Char1_X_Motion_next = 10'd1;
+//            Char1_Y_Motion_next = 10'd0;
+//            end
+//        if (keycode1 == 8'h52)//up arrow
+//            begin
+//            Char2_Y_Motion_next = -10'd1;
+//            Char2_X_Motion_next = 10'd0;
+//            end
+//        if (keycode1 == 8'h50)//left arrow
+//            begin
+//            Char2_Y_Motion_next = 10'd0;
+//            Char2_X_Motion_next = -10'd1;
+//            end
+//         if (keycode1 == 8'h4F)//right arrow
+//            begin
+//            Char2_Y_Motion_next = 10'd0;
+//            Char2_X_Motion_next = 10'd1;
+//            end
+      //CITE!!!!!! EDGE DETECTION STUFF      
+        if (char1_x <= Ball_X_Min && keycode0 == 8'h04)  // trying to move left at left edge
+                   Char1_X_Motion_next = 10'd0;
+        if (char1_x >= Ball_X_Max && keycode0 == 8'h07)  // trying to move right at right edge
+            Char1_X_Motion_next = 10'd0;
+        if (char1_y <= Ball_Y_Min && keycode0 == 8'h1A)  // trying to move up at top edge
+            Char1_Y_Motion_next = 10'd0;
+        if (char1_y >= Ball_Y_Max && keycode0 == 8'h16)  // trying to move down at bottom edge
+            Char1_Y_Motion_next = 10'd0;
+            
+        if (char2_x <= Ball_X_Min && keycode1 == 8'h50)  // trying to move left at left edge
+                   Char2_X_Motion_next = 10'd0;
+        if (char2_x >= Ball_X_Max && keycode1 == 8'h4F)  // trying to move right at right edge
+            Char2_X_Motion_next = 10'd0;
+        if (char2_y <= Ball_Y_Min && keycode1 == 8'h52)  // trying to move up at top edge
+            Char2_Y_Motion_next = 10'd0;
+     
+        //character 2
+         if ( char2_y  >= Ball_Y_Max )  
+            begin
+            Char2_Y_Motion_next = (~ (Char_Y_Step) + 1'b1);  // set to -1 via 2's complement.
+        end
+        else if ( char2_y  <= Ball_Y_Min )  
+        begin
+            Char2_Y_Motion_next = Char_Y_Step;
+        end  
+       //fill in the rest of the motion equations here to bounce left and right
+        else if (char2_x <= Ball_X_Min )  
+        begin
+            Char2_X_Motion_next = Char_X_Step;
+        end 
+        else if (char2_x  >= Ball_X_Max )  
+        begin
+            Char2_X_Motion_next = (~ (Char_X_Step) + 1'b1);  // set to -1 via 2's complement.
+        end
+    end
+    
+    assign Char1_X_next = (char1_x + Char1_X_Motion_next);
+    assign Char1_Y_next = (char1_y + Char1_Y_Motion_next);
+    assign Char2_X_next = (char2_x + Char2_X_Motion_next);
+    assign Char2_Y_next = (char2_y + Char2_Y_Motion_next);
+    
+ always_ff @(posedge clk or posedge reset) //make sure the frame clock is instantiated correctly
+    begin: Move_Char
+        if (reset)
+        begin 
+            Char1_Y_Motion <= 10'd0; 
+			Char1_X_Motion <= 10'd0; 
+			Char2_Y_Motion <= 10'd0; 
+			Char2_X_Motion <= 10'd0;
+            
+			char1_y <= CHAR1Y;
+			char1_x <= CHAR1X;
+			char2_y <= CHAR2Y;
+			char2_x <= CHAR2X;
+			
+			prev_keycode <= 8'h0;
+        end
+        else 
+        begin 
+            prev_keycode <= keycode0;
+            //keep location the same as default
+            char1_y <=  char1_y;
+			char1_x <= char1_x;
+			char2_y <= char2_y;
+			char2_x <= char2_x;
+            
+            
+//			Char1_Y_Motion <= Char1_Y_Motion_next; 
+//			Char1_X_Motion <= Char1_X_Motion_next; 
+
+            char1_y <= Char1_Y_next; 
+            char1_x <= Char1_X_next;
+			
+//			Char2_Y_Motion <= Char2_Y_Motion_next; 
+//			Char2_X_Motion <= Char2_X_Motion_next; 
+
+            char2_y <= Char2_Y_next; 
+            char2_x <= Char2_X_next;
+		end  
+		
+    end
+endmodule
