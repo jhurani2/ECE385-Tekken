@@ -144,90 +144,90 @@ begin
     if(paul_char1)
     begin
        if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 8)))
-            rom_address_comb = (0 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (0 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 8))&&(DrawX < (CHAR1_NAME_X + 16)))
-            rom_address_comb = (1 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (1 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 16))&&(DrawX < (CHAR1_NAME_X + 24)))
-            rom_address_comb = (2 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (2 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 24))&&(DrawX <= (CHAR1_NAME_X + 32)))
-            rom_address_comb = (3 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);    
+            rom_address_comb = (3 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));    
     end    
     else if(paul_char2)
     begin
        if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 8)))
-            rom_address_comb = (0 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (0 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 8))&&(DrawX < (CHAR2_NAME_X + 16)))
-            rom_address_comb = (1 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (1 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 16))&&(DrawX < (CHAR2_NAME_X + 24)))
-            rom_address_comb = (2 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (2 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 24))&&(DrawX <= (CHAR2_NAME_X + 32)))
-            rom_address_comb = (3 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);    
+            rom_address_comb = (3 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));    
     end  
     else if(king_char1)
     begin
        if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 8)))
-            rom_address_comb = (7 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (7 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 8))&&(DrawX < (CHAR1_NAME_X + 16)))
-            rom_address_comb = (5 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (5 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 16))&&(DrawX < (CHAR1_NAME_X + 24)))
-            rom_address_comb = (4 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 24))&&(DrawX <= (CHAR1_NAME_X + 32)))
-            rom_address_comb = (6 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);    
+            rom_address_comb = (6 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));    
     end 
     else if(king_char2)
     begin
        if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 8)))
-            rom_address_comb = (7 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (7 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 8))&&(DrawX < (CHAR2_NAME_X + 16)))
-            rom_address_comb = (5 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (5 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 16))&&(DrawX < (CHAR2_NAME_X + 24)))
-            rom_address_comb = (4 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (4 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 24))&&(DrawX <= (CHAR2_NAME_X + 32)))
-            rom_address_comb = (6 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);    
+            rom_address_comb = (6 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));    
     end 
     else if(ling_char1)
     begin
        if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 8)))
-            rom_address_comb = (3 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (3 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 8))&&(DrawX < (CHAR1_NAME_X + 16)))
-            rom_address_comb = (5 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (5 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 16))&&(DrawX < (CHAR1_NAME_X + 24)))
-            rom_address_comb = (4 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 24))&&(DrawX <= (CHAR1_NAME_X + 32)))
-            rom_address_comb = (6 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);    
+            rom_address_comb = (6 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));    
     end 
     else if(ling_char2)
     begin
        if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 8)))
-            rom_address_comb = (3 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (3 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 8))&&(DrawX < (CHAR2_NAME_X + 16)))
-            rom_address_comb = (5 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (5 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 16))&&(DrawX < (CHAR2_NAME_X + 24)))
-            rom_address_comb = (4 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (4 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 24))&&(DrawX <= (CHAR2_NAME_X + 32)))
-            rom_address_comb = (6 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);    
+            rom_address_comb = (6 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));    
     end
     else if(nina_char1)
     begin
        if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 8)))
-            rom_address_comb = (4 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 8))&&(DrawX < (CHAR1_NAME_X + 16)))
-            rom_address_comb = (5 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (5 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 16))&&(DrawX < (CHAR1_NAME_X + 24)))
-            rom_address_comb = (4 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);
+            rom_address_comb = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
        else if ((DrawX >= (CHAR1_NAME_X + 24))&&(DrawX <= (CHAR1_NAME_X + 32)))
-            rom_address_comb = (1 * SPRITE_W) + ((name1_ly >> 2) * SHEET_W) + ((name1_lx % 8)* 4);    
+            rom_address_comb = (1 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));    
     end 
     else if(nina_char2)
     begin
        if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 8)))
-            rom_address_comb = (4 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (4 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 8))&&(DrawX < (CHAR2_NAME_X + 16)))
-            rom_address_comb = (5 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (5 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 16))&&(DrawX < (CHAR2_NAME_X + 24)))
-            rom_address_comb = (4 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);
+            rom_address_comb = (4 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
        else if ((DrawX >= (CHAR2_NAME_X + 24))&&(DrawX <= (CHAR2_NAME_X + 32)))
-            rom_address_comb = (1 * SPRITE_W) + ((name2_ly >> 2) * SHEET_W) + ((name2_lx % 8)* 4);    
+            rom_address_comb = (1 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));    
     end 
   
         
