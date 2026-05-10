@@ -29,6 +29,8 @@ module font_m(
 	input logic paul_char1, paul_char2, king_char1, king_char2, nina_char1,
     input logic nina_char2,ling_char1, ling_char2,
 	input logic [7:0] keycode0, keycode1,
+	input logic [3:0] sys_state,
+	input logic [6:0] p1_health, p2_health,
 	output logic [3:0] red, green, blue,
 	output logic font_bound,
 	output logic timer_start,
@@ -36,33 +38,51 @@ module font_m(
 
 );
 
-logic [15:0] rom_address, rom_address_ff, rom_address_comb;
+logic [16:0] rom_address, rom_address_ff, rom_address_comb, go_address, paul_address, game_address;
 logic [1:0] rom_q, rom_q2;
 logic [5:0] out, count;
 logic [3:0] palette_red, palette_green, palette_blue, palette_red2, palette_green2, palette_blue2;
-logic signed [10:0] font_lx, font_ly;
-logic signed [10:0] name1_lx, name1_ly;
-logic signed [10:0] name2_lx, name2_ly;
+logic [10:0] font_lx, font_ly;
+logic [10:0] name1_lx, name1_ly;
+logic [10:0] name2_lx, name2_ly;
+
 logic negedge_vga_clk;
 
 
 localparam SPRITE_W = 32;
 localparam SPRITE_H = 48;
-localparam SPRITE_X = 295;
-localparam SPRITE_Y = 230;
+localparam SPRITE_X = 250;
+localparam SPRITE_Y = 180;
 localparam SHEET_W = 23*32;
 
 // where character 1's name starts (top left corner)
 localparam CHAR1_NAME_X = 20;
 localparam CHAR1_NAME_Y = 50;
 localparam CHAR1_NAME_L = 32;
-localparam CHAR1_NAME_H = 16;
+localparam CHAR1_NAME_H = 48;
 
 // where character 2's name ends (top right corner)
-localparam CHAR2_NAME_X = 620;
+localparam CHAR2_NAME_X = 490;
 localparam CHAR2_NAME_Y = 50;
 localparam CHAR2_NAME_L = 32;
-localparam CHAR2_NAME_H = 16;
+localparam CHAR2_NAME_H = 48;
+
+localparam GAME_OVERX = 220;
+localparam GAME_OVERY = 80;
+logic [10:0] gover_lx, gover_ly;
+
+
+localparam WINNERX = 220;
+localparam WINNERY = 140;
+logic [10:0] result_lx, result_ly;
+
+localparam MENUX = 220;
+localparam MENUY = 200;
+logic [10:0] menu_lx, menu_ly;
+
+localparam RESTARTX = 220;
+localparam RESTARTY = 260;
+logic [10:0] restart_lx, restart_ly;
 
 // read from ROM on negedge, set pixel on posedge
 assign negedge_vga_clk = ~pix_clk;
@@ -72,6 +92,8 @@ assign name1_lx = {1'b0, DrawX} - {1'b0, CHAR1_NAME_X};
 assign name1_ly = {1'b0, DrawY} - {1'b0, CHAR1_NAME_Y};
 assign name2_lx = {1'b0, DrawX} - {1'b0, CHAR2_NAME_X};
 assign name2_ly = {1'b0, DrawY} - {1'b0, CHAR2_NAME_Y};
+
+
 // address into the rom = (x*xDim)/640 + ((y*yDim)/480) * xDim
 // this will stretch out the sprite across the entire screen
 //assign rom_address = ((DrawX * 736) / 640) + (((DrawY * 48) / 480) * 736);
@@ -120,113 +142,118 @@ assign countdown_timer = out;
 always_comb //CITE!!!
 begin
     rom_address_ff = 16'b0;
-    if ((DrawX >= SPRITE_X) && (DrawX < SPRITE_X + SPRITE_W*2) && 
-                          (DrawY >= SPRITE_Y) && (DrawY < SPRITE_Y + SPRITE_H*4))
+    if ((DrawX >= SPRITE_X) && (DrawX < SPRITE_X + 96) && 
+                          (DrawY >= SPRITE_Y) && (DrawY < SPRITE_Y + 144))
     begin
         if (out == 6'd4)
-            rom_address_ff = (8 * SPRITE_W) + ((font_ly >> 2) * SHEET_W) + ((font_lx >> 2) % SPRITE_W);
+            rom_address_ff = (8 * SPRITE_W) + ((font_ly / 3) * SHEET_W) + ((font_lx / 3) % SPRITE_W);
         else if (out == 6'd3)
-            rom_address_ff = (9 * SPRITE_W) + ((font_ly >> 2) * SHEET_W) + ((font_lx >> 2) % SPRITE_W);
+            rom_address_ff = (9 * SPRITE_W) + ((font_ly / 3) * SHEET_W) + ((font_lx / 3) % SPRITE_W);
         else if (out == 6'd2)
-            rom_address_ff = (10 * SPRITE_W) + ((font_ly >> 2) * SHEET_W) + ((font_lx >> 2) % SPRITE_W);
-        else if (out == 6'd1)
-        begin
-            if (DrawX < SPRITE_X + SPRITE_W)
-                rom_address_ff = (6 * SPRITE_W) + ((font_ly >> 2) * SHEET_W) + ((font_lx >> 2) % SPRITE_W);
-            else
-                rom_address_ff = (11 * SPRITE_W) + ((font_ly >> 2) * SHEET_W) + ((font_lx >> 2) % SPRITE_W);
-        end
+            rom_address_ff = (10 * SPRITE_W) + ((font_ly / 3) * SHEET_W) + ((font_lx / 3) % SPRITE_W);
     end
+    else if ((DrawX >= SPRITE_X) && (DrawX < SPRITE_X + 192) && 
+                          (DrawY >= SPRITE_Y) && (DrawY < SPRITE_Y + 144))
+        begin
+        if (out == 6'd1)
+        begin
+            if (DrawX >= SPRITE_X + 96)
+                rom_address_ff = (6 * SPRITE_W) + ((font_ly / 3) * SHEET_W) + ((font_lx / 3) % SPRITE_W);
+            else if(DrawX < SPRITE_X + 192)
+                rom_address_ff = (11 * SPRITE_W) + ((font_ly /3) * SHEET_W) + ((font_lx / 3) % SPRITE_W);
+       end
+       end
+ 
 end
 always_comb
 begin
     rom_address_comb = 16'b0;
     if(paul_char1)
     begin
-       if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 8)))
+       if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 32)) && (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (0 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 8))&&(DrawX < (CHAR1_NAME_X + 16)))
+       else if ((DrawX >= (CHAR1_NAME_X + 32))&&(DrawX < (CHAR1_NAME_X + 64))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (1 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 16))&&(DrawX < (CHAR1_NAME_X + 24)))
+       else if ((DrawX >= (CHAR1_NAME_X + 64))&&(DrawX < (CHAR1_NAME_X + 96))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (2 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 24))&&(DrawX <= (CHAR1_NAME_X + 32)))
+       else if ((DrawX >= (CHAR1_NAME_X + 96))&&(DrawX <= (CHAR1_NAME_X + 128))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (3 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));    
     end    
-    else if(paul_char2)
+    if(paul_char2)
     begin
-       if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 8)))
+       if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 32))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (0 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 8))&&(DrawX < (CHAR2_NAME_X + 16)))
+       else if ((DrawX >= (CHAR2_NAME_X + 32))&&(DrawX < (CHAR2_NAME_X + 64))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (1 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 16))&&(DrawX < (CHAR2_NAME_X + 24)))
+       else if ((DrawX >= (CHAR2_NAME_X +64))&&(DrawX < (CHAR2_NAME_X + 94))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (2 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 24))&&(DrawX <= (CHAR2_NAME_X + 32)))
+       else if ((DrawX >= (CHAR2_NAME_X + 96))&&(DrawX <= (CHAR2_NAME_X + 128))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (3 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));    
     end  
-    else if(king_char1)
+    if(king_char1)
     begin
-       if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 8)))
+       if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 32))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (7 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 8))&&(DrawX < (CHAR1_NAME_X + 16)))
+       else if ((DrawX >= (CHAR1_NAME_X + 32))&&(DrawX < (CHAR1_NAME_X + 64))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (5 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 16))&&(DrawX < (CHAR1_NAME_X + 24)))
+       else if ((DrawX >= (CHAR1_NAME_X + 64))&&(DrawX < (CHAR1_NAME_X + 96))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 24))&&(DrawX <= (CHAR1_NAME_X + 32)))
+       else if ((DrawX >= (CHAR1_NAME_X + 96))&&(DrawX <= (CHAR1_NAME_X + 128))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (6 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));    
     end 
-    else if(king_char2)
+    if(king_char2)
     begin
-       if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 8)))
+       if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 32))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (7 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 8))&&(DrawX < (CHAR2_NAME_X + 16)))
+       else if ((DrawX >= (CHAR2_NAME_X + 32))&&(DrawX < (CHAR2_NAME_X + 64))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (5 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 16))&&(DrawX < (CHAR2_NAME_X + 24)))
+       else if ((DrawX >= (CHAR2_NAME_X + 64))&&(DrawX < (CHAR2_NAME_X + 96))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (4 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 24))&&(DrawX <= (CHAR2_NAME_X + 32)))
+       else if ((DrawX >= (CHAR2_NAME_X + 96))&&(DrawX <= (CHAR2_NAME_X + 128))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (6 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));    
     end 
-    else if(ling_char1)
+    if(ling_char1)
     begin
-       if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 8)))
+       if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 32))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (3 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 8))&&(DrawX < (CHAR1_NAME_X + 16)))
+       else if ((DrawX >= (CHAR1_NAME_X + 32))&&(DrawX < (CHAR1_NAME_X + 64))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (5 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 16))&&(DrawX < (CHAR1_NAME_X + 24)))
+       else if ((DrawX >= (CHAR1_NAME_X + 64))&&(DrawX < (CHAR1_NAME_X + 96))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 24))&&(DrawX <= (CHAR1_NAME_X + 32)))
+       else if ((DrawX >= (CHAR1_NAME_X + 96))&&(DrawX <= (CHAR1_NAME_X + 128))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (6 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));    
     end 
-    else if(ling_char2)
+    if(ling_char2)
     begin
-       if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 8)))
+       if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 32))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (3 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 8))&&(DrawX < (CHAR2_NAME_X + 16)))
+       else if ((DrawX >= (CHAR2_NAME_X + 32))&&(DrawX < (CHAR2_NAME_X + 64))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (5 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 16))&&(DrawX < (CHAR2_NAME_X + 24)))
+       else if ((DrawX >= (CHAR2_NAME_X + 64))&&(DrawX < (CHAR2_NAME_X + 96))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (4 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 24))&&(DrawX <= (CHAR2_NAME_X + 32)))
+       else if ((DrawX >= (CHAR2_NAME_X + 96))&&(DrawX <= (CHAR2_NAME_X + 128))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (6 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));    
     end
-    else if(nina_char1)
+    if(nina_char1)
     begin
-       if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 8)))
+       if((DrawX >= CHAR1_NAME_X) && (DrawX < (CHAR1_NAME_X + 32))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 8))&&(DrawX < (CHAR1_NAME_X + 16)))
+       else if ((DrawX >= (CHAR1_NAME_X + 32))&&(DrawX < (CHAR1_NAME_X + 64))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (5 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 16))&&(DrawX < (CHAR1_NAME_X + 24)))
+       else if ((DrawX >= (CHAR1_NAME_X + 64))&&(DrawX < (CHAR1_NAME_X + 96))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));
-       else if ((DrawX >= (CHAR1_NAME_X + 24))&&(DrawX <= (CHAR1_NAME_X + 32)))
+       else if ((DrawX >= (CHAR1_NAME_X + 96))&&(DrawX <= (CHAR1_NAME_X + 128))&& (DrawY >= CHAR1_NAME_Y) && (DrawY < CHAR1_NAME_Y + CHAR1_NAME_H))
             rom_address_comb = (1 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));    
     end 
-    else if(nina_char2)
+    if(nina_char2)
     begin
-       if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 8)))
+       if((DrawX >= CHAR2_NAME_X) && (DrawX < (CHAR2_NAME_X + 32))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (4 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 8))&&(DrawX < (CHAR2_NAME_X + 16)))
+       else if ((DrawX >= (CHAR2_NAME_X + 32))&&(DrawX < (CHAR2_NAME_X + 64))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (5 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 16))&&(DrawX < (CHAR2_NAME_X + 24)))
+       else if ((DrawX >= (CHAR2_NAME_X + 64))&&(DrawX < (CHAR2_NAME_X + 96))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (4 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));
-       else if ((DrawX >= (CHAR2_NAME_X + 24))&&(DrawX <= (CHAR2_NAME_X + 32)))
+       else if ((DrawX >= (CHAR2_NAME_X + 96))&&(DrawX <= (CHAR2_NAME_X + 128))&& (DrawY >= CHAR2_NAME_Y) && (DrawY < CHAR2_NAME_Y + CHAR2_NAME_H))
             rom_address_comb = (1 * SPRITE_W) + ((name2_ly) * SHEET_W) + ((name2_lx % 32));    
     end 
   
@@ -237,9 +264,115 @@ end
 
 always_comb
 begin
+    // DRAWING GAME OVER
+    if((DrawX >= GAME_OVERX) && (DrawX < GAME_OVERX + 32) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (6 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));  
+    else if((DrawX >= GAME_OVERX + 32) && (DrawX < GAME_OVERX + 64) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (1 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); 
+    else if((DrawX >= GAME_OVERX + 64) && (DrawX < GAME_OVERX + 96) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (12 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); 
+    else if((DrawX >= GAME_OVERX + 96) && (DrawX < GAME_OVERX + 128) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (13 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); 
+    else if((DrawX >= GAME_OVERX + 160) && (DrawX < GAME_OVERX + 192) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (11 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); 
+    else if((DrawX >= GAME_OVERX + 192) && (DrawX < GAME_OVERX + 224) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (14 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); 
+    else if((DrawX >= GAME_OVERX + 224) && (DrawX < GAME_OVERX + 256) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (13 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); 
+    else if((DrawX >= GAME_OVERX + 256) && (DrawX < GAME_OVERX + 288) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (15 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));   
+end
+
+//Drawing result
+always_comb
+begin
+    if(p1_health > p2_health)
+        begin
+        if((DrawX >= WINNERX + 32) && (DrawX < GAME_OVERX + 64) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+            game_address = (10 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //1
+        end
+    else if(p1_health < p2_health)
+        begin
+        if((DrawX >= WINNERX + 32) && (DrawX < GAME_OVERX + 64) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+            game_address = (9 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //2
+        end
+    
+    if (p1_health != p2_health)
+    begin
+         if((DrawX >= WINNERX) && (DrawX < WINNERX + 32) && (DrawY >= WINNERY) && (DrawY < WINNERY + 48))
+        game_address = (0 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));  //P
+         else if((DrawX >= WINNERX + 96) && (DrawX < WINNERX + 128) && (DrawY >= WINNERY) && (DrawY < WINNERY + 48))
+        game_address = (16 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //W
+         else if((DrawX >= WINNERX + 128) && (DrawX < WINNERX + 160) && (DrawY >= WINNERY) && (DrawY < WINNERY + 48))
+            game_address = (5 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //I
+        else if((DrawX >= WINNERX + 160) && (DrawX < WINNERX + 192) && (DrawY >= WINNERY) && (DrawY < WINNERY + 48))
+            game_address = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //N
+        else if((DrawX >= WINNERX + 192) && (DrawX < WINNERX + 224) && (DrawY >= WINNERY) && (DrawY < WINNERY + 48))
+            game_address = (17 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //S
+    end
+    if(p1_health == p2_health)
+    begin
+         if((DrawX >= WINNERX) && (DrawX < WINNERX + 32) && (DrawY >= WINNERY) && (DrawY < WINNERY + 48))
+            game_address = (19 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));  //T
+        else if((DrawX >= WINNERX + 32) && (DrawX < WINNERX + 64) && (DrawY >= WINNERY) && (DrawY < WINNERY + 48))
+            game_address = (5 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //I
+        else if((DrawX >= WINNERX + 64) && (DrawX < WINNERX + 96) && (DrawY >= WINNERY) && (DrawY < WINNERY + 48))
+            game_address = (13 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //E
+    
+    end    
+end
+
+always_comb
+begin
+     if((DrawX >= MENUX) && (DrawX < MENUX + 32) && (DrawY >= MENUY) && (DrawY < MENUY + 48))
+        game_address = (12 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));  //m
+    else if((DrawX >= MENUX + 64) && (DrawX < MENUX + 96) && (DrawY >= MENUY) && (DrawY < MENUY + 48))
+        game_address = (18 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //F
+    else if((DrawX >= MENUX + 96) && (DrawX < MENUX + 128) && (DrawY >= MENUY) && (DrawY < MENUY + 48))
+        game_address = (11 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //0
+    else if((DrawX >= MENUX + 128) && (DrawX < MENUX + 160) && (DrawY >= MENUY) && (DrawY < MENUY + 48))
+        game_address = (15 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //R
+    else if((DrawX >= GAME_OVERX + 192) && (DrawX < GAME_OVERX + 224) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (12 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //M
+    else if((DrawX >= GAME_OVERX + 224) && (DrawX < GAME_OVERX + 256) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (13 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //e
+    else if((DrawX >= GAME_OVERX + 256) && (DrawX < GAME_OVERX + 288) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (4 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //N
+      else if((DrawX >= GAME_OVERX + 288) && (DrawX < GAME_OVERX + 320) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (2 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //u
+        
+    if((DrawX >= RESTARTX) && (DrawX < RESTARTX + 32) && (DrawY >= RESTARTY) && (DrawY < RESTARTY + 48))
+        game_address = (15 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));  //R
+    else if((DrawX >= RESTARTX + 64) && (DrawX < RESTARTX + 96) && (DrawY >= RESTARTY) && (DrawY < RESTARTY + 48))
+        game_address = (18 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //F
+    else if((DrawX >= RESTARTX + 96) && (DrawX < RESTARTX + 128) && (DrawY >= RESTARTY) && (DrawY < RESTARTY + 48))
+        game_address = (11 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //0
+    else if((DrawX >= RESTARTX + 128) && (DrawX < RESTARTX + 160) && (DrawY >= MENUY) && (DrawY < MENUY + 48))
+        game_address = (15 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //R
+
+    else if((DrawX >= RESTARTX + 192) && (DrawX < RESTARTX + 224) && (DrawY >= RESTARTY) && (DrawY < RESTARTY + 48))
+        game_address = (15 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));  //R
+    else if((DrawX >= GAME_OVERX + 224) && (DrawX < GAME_OVERX + 256) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (13 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //e
+    else if((DrawX >= GAME_OVERX + 256) && (DrawX < GAME_OVERX + 288) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (17 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //S
+      else if((DrawX >= GAME_OVERX + 288) && (DrawX < GAME_OVERX + 320) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (19 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //T
+        else if((DrawX >= GAME_OVERX + 320) && (DrawX < GAME_OVERX + 352) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (1 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //A
+           else if((DrawX >= GAME_OVERX + 384) && (DrawX < GAME_OVERX + 416) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (15 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32));  //R
+        else if((DrawX >= GAME_OVERX + 448) && (DrawX < GAME_OVERX + 480) && (DrawY >= GAME_OVERY) && (DrawY < GAME_OVERY + 48))
+        game_address = (19 * SPRITE_W) + ((name1_ly) * SHEET_W) + ((name1_lx % 32)); //T
+        
+end
+
+
+always_comb
+begin
     if (blank)
         begin
-           if ((DrawX >= SPRITE_X) && (DrawY >= SPRITE_Y))
+           if ((DrawX >= SPRITE_X) && (DrawY >= SPRITE_Y) && (out != 6'd0))
                 begin
                 red = palette_red;
                 green = palette_green;
@@ -260,10 +393,15 @@ begin
         end
 end
 
-assign font_bound = (((DrawX >= SPRITE_X) && (DrawX <= SPRITE_X + 2*SPRITE_W) && (DrawY >= SPRITE_Y) && (DrawY <= SPRITE_Y + SPRITE_H))
+assign font_bound = (((DrawX >= SPRITE_X) && (DrawX <= SPRITE_X + 200) && (DrawY >= SPRITE_Y) && (DrawY <= SPRITE_Y + 192))
                     || ((DrawX >= CHAR1_NAME_X) && (DrawX <= CHAR1_NAME_X + 4*CHAR1_NAME_L) && (DrawY >= CHAR1_NAME_Y) && (DrawY <= CHAR1_NAME_Y + CHAR1_NAME_H))
                     ||((DrawX >= CHAR2_NAME_X) && (DrawX <= CHAR2_NAME_X + 4*CHAR2_NAME_L) && (DrawY >= CHAR2_NAME_Y) && (DrawY <= CHAR2_NAME_Y + CHAR2_NAME_H)));
                     //(rom_address != 16'b0);
+//assign font_bound = (((DrawX >= SPRITE_X) && (DrawX <= SPRITE_X + 4*SPRITE_W) && (DrawY >= SPRITE_Y) && (DrawY <= SPRITE_Y + 2*SPRITE_H))
+//                    || ((DrawX >= CHAR1_NAME_X) && (DrawX <= CHAR1_NAME_X + 4*CHAR1_NAME_L) && (DrawY >= CHAR1_NAME_Y) && (DrawY <= CHAR1_NAME_Y + CHAR1_NAME_H))
+//                    ||((DrawX >= CHAR2_NAME_X) && (DrawX <= CHAR2_NAME_X + 4*CHAR2_NAME_L) && (DrawY >= CHAR2_NAME_Y) && (DrawY <= CHAR2_NAME_Y + CHAR2_NAME_H)));
+//                    //(rom_address != 16'b0);
+
 
 fontm_rom Font_rom (
 	.clock   (negedge_vga_clk),
