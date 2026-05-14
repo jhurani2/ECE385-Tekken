@@ -1,0 +1,133 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 04/23/2026 09:44:05 PM
+// Design Name: 
+// Module Name: paul_m
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
+
+module paul_m (
+	input logic [9:0] DrawX, DrawY,
+	input logic [9:0]  char1_y, char1_x, char2_x, char2_y,
+	input logic char1d,
+	input logic char2d,
+	input logic blank,
+	input logic pix_clk,
+	input logic [2:0] frame1, frame2,
+	output logic [3:0] red, green, blue,
+	output logic bounds
+);
+
+//logic [13:0] rom_address;
+logic [3:0] rom_q;
+logic [2:0] frame;
+logic [9:0] drawx,drawy;
+logic [3:0] palette_red, palette_green, palette_blue;
+logic negedge_pix_clk;
+logic paul_bounds;
+logic [13:0] addr;
+logic signed [10:0] paul_lx, paul_ly;
+logic [9:0] PaulX, PaulY;
+// logic signed [10:0] jack_lx, jack_ly;
+localparam SPRITE_W  = 64;
+localparam SPRITE_H  = 48;
+localparam SCALE     = 4;
+localparam FRAME_PIX = SPRITE_W * SPRITE_H;  // 8192
+localparam BG_W      = 256;
+localparam BG_H      = 128;
+localparam FRAME_W   = 640;
+localparam FRAME_H   = 480; 
+localparam SHEET_W = 320;
+
+always_comb
+begin
+    if (char1d)
+    begin
+        PaulX = char1_x;
+        PaulY = char1_y;
+        frame = frame1;
+    end
+    else if (char2d)
+    begin
+        PaulX = char2_x;
+        PaulY = char2_y;
+        frame = frame2;
+    end
+end
+
+assign paul_lx = {1'b0, DrawX} - {1'b0, PaulX};
+assign paul_ly = {1'b0, DrawY} - {1'b0, PaulY};
+// read from ROM on negedge, set pixel on posedge
+assign negedge_pix_clk = ~pix_clk;
+
+always_comb
+begin
+    if(char1d)
+        paul_bounds = (~paul_lx[10]) && (~paul_ly[10]) && (paul_lx < SPRITE_W * SCALE) && (paul_ly < SPRITE_H * SCALE);
+    else if(char2d)
+        paul_bounds = (~paul_lx[10]) && (~paul_ly[10]) && (paul_lx < SPRITE_W * SCALE) && (paul_ly < SPRITE_H * SCALE);
+    else
+        paul_bounds = 1'b0;
+end
+//assign paul_bounds = (~paul_lx[10]) && (~paul_ly[10]) && (paul_lx < SPRITE_W * SCALE) && (paul_ly < SPRITE_H * SCALE);
+assign bounds = paul_bounds;
+
+always_comb
+begin
+    addr = 14'b0; 
+    if (paul_bounds)
+    begin
+        if (char1d)
+            addr = (frame * SPRITE_W) + ((paul_ly >> 2) * SHEET_W) + ((paul_lx >> 2)% SPRITE_W);
+        else if (char2d)
+             addr = (frame * SPRITE_W) + ((paul_ly >> 2) * SHEET_W) + (SPRITE_W - 1 - ((paul_lx >> 2)% SPRITE_W));
+    end
+    
+            
+end
+
+always_comb
+begin
+    if (blank)
+        begin
+        red = palette_red;
+        green = palette_green;
+        blue = palette_blue;
+        end
+    else
+        begin
+        red = 4'h0;
+        green = 4'h0;
+        blue = 4'h0;
+        end
+end
+
+paul_rom Paul_rom (
+	.clock   (negedge_pix_clk),
+	.mem_clk (pix_clk),
+	.address (addr),
+	.q       (rom_q)
+);
+
+paul_palette Paul_palette (
+	.index (rom_q),
+	.red   (palette_red),
+	.green (palette_green),
+	.blue  (palette_blue)
+);
+
+endmodule
